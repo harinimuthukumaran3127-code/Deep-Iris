@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EyeCare AI - Free Eye Health Screening for Rural Communities</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .drag-area {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        
+        .drag-area.drag-over {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        .processing-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .result-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .confidence-bar {
+            transition: width 1s ease-in-out;
+        }
+        
+        .tab-active {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+        
+        .iris-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="min-h-full bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <!-- Outer eye shape -->
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
+                            <!-- Iris -->
+                            <circle cx="12" cy="12" r="3" stroke-width="2"/>
+                            <!-- Pupil -->
+                            <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                            <!-- AI scanning lines -->
+                            <path stroke-linecap="round" stroke-width="1.5" d="M8 8l-2-2M16 8l2-2M8 16l-2 2M16 16l2 2" opacity="0.7"/>
+                            <!-- Health cross indicator -->
+                            <path stroke-linecap="round" stroke-width="1.5" d="M12 6v2M12 16v2M6 12h2M16 12h2" opacity="0.5"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold">EyeCare AI</h1>
+                        <p class="text-blue-100">Free Eye Health Screening for Everyone</p>
+                    </div>
+                </div>
+                <div id="headerActions" class="flex items-center space-x-4">
+                    <!-- Logged out state -->
+                    <div id="loggedOutActions" class="flex items-center space-x-4">
+                        <button onclick="showLogin()" class="glass-effect px-4 py-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all">
+                            Sign In
+                        </button>
+                        <button onclick="showRegister()" class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all font-medium">
+                            Sign Up
+                        </button>
+                    </div>
+                    
+                    <!-- Logged in state -->
+                    <div id="loggedInActions" class="hidden flex items-center space-x-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                <span id="userInitials" class="text-white font-medium">JD</span>
+                            </div>
+                            <div class="text-right">
+                                <div id="userName" class="font-medium">Dr. John Doe</div>
+                                <div id="userRole" class="text-xs text-blue-100">Ophthalmologist</div>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <button onclick="toggleUserMenu()" class="glass-effect p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                                <a href="#" onclick="showProfile()" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">👤 Profile</a>
+                                <a href="#" onclick="showSettings()" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">⚙️ Settings</a>
+                                <a href="#" onclick="showSubscription()" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">💳 Subscription</a>
+                                <hr class="my-2">
+                                <a href="#" onclick="logout()" class="block px-4 py-2 text-red-600 hover:bg-gray-100">🚪 Sign Out</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Sign In to EyeCare AI</h2>
+                <button onclick="closeModal('loginModal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Demo Credentials Info -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <h3 class="text-sm font-medium text-green-800 mb-2">🔑 Demo Accounts (For Testing Only)</h3>
+                <div class="text-xs text-green-700 space-y-1">
+                    <div><strong>Email:</strong> user@eyecare.com <strong>Password:</strong> user123</div>
+                    <div><strong>Email:</strong> village@eyecare.com <strong>Password:</strong> village123</div>
+                    <div><strong>Email:</strong> health@eyecare.com <strong>Password:</strong> health123</div>
+                </div>
+                <p class="text-xs text-green-600 mt-2 font-medium">💡 New users must create their own account</p>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input type="email" id="loginEmail" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="user@eyecare.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="loginPassword" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="user123">
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                    </label>
+                    <a href="#" class="text-sm text-blue-600 hover:text-blue-800">Forgot password?</a>
+                </div>
+                
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Sign In
+                </button>
+                
+                <div class="text-center">
+                    <span class="text-gray-600">Don't have an account? </span>
+                    <button type="button" onclick="switchToRegister()" class="text-blue-600 hover:text-blue-800 font-medium">Sign up</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="registerModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Create Account</h2>
+                <button onclick="closeModal('registerModal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <form onsubmit="handleRegister(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                        <input type="text" id="firstName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="John">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                        <input type="text" id="lastName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Doe">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input type="email" id="registerEmail" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="yourname@gmail.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">I am a</label>
+                    <select id="userRole" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select who you are</option>
+                        <option value="Community Member">Community Member</option>
+                        <option value="Village Health Worker">Village Health Worker</option>
+                        <option value="Family Member">Family Member/Caregiver</option>
+                        <option value="Teacher">Teacher/School Staff</option>
+                        <option value="Local Health Volunteer">Local Health Volunteer</option>
+                        <option value="Healthcare Professional">Healthcare Professional</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Village/Area</label>
+                    <input type="text" id="institution" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Your village or area name">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="registerPassword" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="••••••••">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="••••••••">
+                </div>
+                
+                <div class="flex items-start">
+                    <input type="checkbox" id="agreeTerms" required class="w-4 h-4 text-blue-600 border-gray-300 rounded mt-1">
+                    <label for="agreeTerms" class="ml-2 text-sm text-gray-600">
+                        I agree to the <a href="#" class="text-blue-600 hover:text-blue-800">Terms of Service</a> and <a href="#" class="text-blue-600 hover:text-blue-800">Privacy Policy</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Create Account
+                </button>
+                
+                <div class="text-center">
+                    <span class="text-gray-600">Already have an account? </span>
+                    <button type="button" onclick="switchToLogin()" class="text-blue-600 hover:text-blue-800 font-medium">Sign in</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">User Profile</h2>
+                <button onclick="closeModal('profileModal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-1">
+                    <div class="text-center">
+                        <div class="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-2xl text-white font-bold" id="profileInitials">JD</span>
+                        </div>
+                        <button class="text-blue-600 hover:text-blue-800 text-sm">Change Photo</button>
+                    </div>
+                    
+                    <div class="mt-6 space-y-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">Account Statistics</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Total Analyses:</span>
+                                    <span class="font-medium" id="profileAnalyses">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Member Since:</span>
+                                    <span class="font-medium" id="memberSince">Jan 2024</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Subscription:</span>
+                                    <span class="font-medium text-green-600">Pro Plan</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="md:col-span-2">
+                    <form onsubmit="updateProfile(event)" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                                <input type="text" id="profileFirstName" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                <input type="text" id="profileLastName" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" id="profileEmail" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Professional Role</label>
+                            <select id="profileRole" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="Ophthalmologist">Ophthalmologist</option>
+                                <option value="Optometrist">Optometrist</option>
+                                <option value="Medical Student">Medical Student</option>
+                                <option value="Researcher">Researcher</option>
+                                <option value="Technician">Medical Technician</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Institution/Hospital</label>
+                            <input type="text" id="profileInstitution" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">License Number (Optional)</label>
+                            <input type="text" id="profileLicense" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        
+                        <div class="flex space-x-4 pt-4">
+                            <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                Update Profile
+                            </button>
+                            <button type="button" onclick="closeModal('profileModal')" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition-colors font-medium">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Welcome Page (shown when not logged in) -->
+    <div id="welcomePage" class="min-h-screen flex items-center justify-center">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <div class="mb-8">
+                <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <svg class="w-16 h-16 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <!-- Outer eye shape -->
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
+                        <!-- Iris -->
+                        <circle cx="12" cy="12" r="3" stroke-width="2"/>
+                        <!-- Pupil -->
+                        <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                        <!-- AI scanning lines -->
+                        <path stroke-linecap="round" stroke-width="1.5" d="M8 8l-2-2M16 8l2-2M8 16l-2 2M16 16l2 2" opacity="0.7"/>
+                        <!-- Health cross indicator -->
+                        <path stroke-linecap="round" stroke-width="1.5" d="M12 6v2M12 16v2M6 12h2M16 12h2" opacity="0.5"/>
+                    </svg>
+                </div>
+                <h1 class="text-5xl font-bold text-gray-800 mb-4">Welcome to EyeCare AI</h1>
+                <p class="text-xl text-gray-600 mb-8">Free eye health screening for rural communities - Check your eye health from home</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Easy to Use</h3>
+                    <p class="text-gray-600">Simply take a photo of your eye with any smartphone camera - no special equipment needed</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Completely Free</h3>
+                    <p class="text-gray-600">No cost, no hidden fees - healthcare should be accessible to everyone, everywhere</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Simple Results</h3>
+                    <p class="text-gray-600">Clear, easy-to-understand results with guidance on when to seek medical help</p>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Create Your Free Account to Get Started</h2>
+                <p class="text-gray-600 mb-4">Account required to access eye health screening</p>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                    <h3 class="font-medium text-green-800 mb-2">✅ Why create an account?</h3>
+                    <ul class="text-sm text-green-700 space-y-1">
+                        <li>• Keep track of your eye health over time</li>
+                        <li>• Secure storage of your screening results</li>
+                        <li>• Access your history from any device</li>
+                        <li>• Always 100% free - no hidden costs</li>
+                    </ul>
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button onclick="showRegister()" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors text-lg font-medium">
+                        🆓 Create Free Account
+                    </button>
+                    <button onclick="showLogin()" class="border-2 border-green-600 text-green-600 px-8 py-3 rounded-lg hover:bg-green-50 transition-colors text-lg font-medium">
+                        Already Have Account?
+                    </button>
+                </div>
+            </div>
+            
+            <div class="text-sm text-gray-500">
+                <p>Trusted by rural communities worldwide • Your privacy is protected • Always free to use</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard (shown when logged in) -->
+    <div id="dashboard" class="hidden max-w-7xl mx-auto px-4 py-8">
+        <!-- Navigation Tabs -->
+        <div class="flex space-x-1 bg-gray-200 p-1 rounded-lg mb-8">
+            <button onclick="switchTab('upload')" id="tab-upload" class="tab-active flex-1 py-3 px-4 rounded-md font-medium transition-all">
+                📷 Take Photo
+            </button>
+            <button onclick="switchTab('preprocessing')" id="tab-preprocessing" class="flex-1 py-3 px-4 rounded-md font-medium hover:bg-gray-300 transition-all">
+                ✨ Improve Image
+            </button>
+            <button onclick="switchTab('analysis')" id="tab-analysis" class="flex-1 py-3 px-4 rounded-md font-medium hover:bg-gray-300 transition-all">
+                👁️ Check Eye Health
+            </button>
+            <button onclick="switchTab('history')" id="tab-history" class="flex-1 py-3 px-4 rounded-md font-medium hover:bg-gray-300 transition-all">
+                📋 My Results
+            </button>
+        </div>
+
+        <!-- Upload Tab -->
+        <div id="content-upload" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Upload Area -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Take a Photo of Your Eye</h3>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <h4 class="font-medium text-blue-800 mb-2">📱 How to take a good photo:</h4>
+                        <ul class="text-sm text-blue-700 space-y-1">
+                            <li>• Use good lighting (near a window is best)</li>
+                            <li>• Hold camera 6-8 inches from your eye</li>
+                            <li>• Keep your eye wide open</li>
+                            <li>• Ask someone to help if needed</li>
+                        </ul>
+                    </div>
+                    <div id="dropArea" class="drag-area rounded-lg p-8 text-center">
+                        <div class="mb-4">
+                            <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                        <p class="text-lg font-medium text-gray-700 mb-2">Tap to take photo or select from gallery</p>
+                        <button onclick="document.getElementById('fileInput').click()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors text-lg">
+                            📷 Choose Photo
+                        </button>
+                        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.bmp" capture="environment" class="hidden">
+                        <p class="text-sm text-gray-400 mt-4">Works with any phone camera • Free to use</p>
+                    </div>
+                </div>
+
+                <!-- Preview Area -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Image Preview</h3>
+                    <div id="previewArea" class="border-2 border-gray-200 rounded-lg h-80 flex items-center justify-center relative overflow-hidden">
+                        <div class="text-center text-gray-400">
+                            <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <p>No image selected</p>
+                        </div>
+                    </div>
+                    <div id="imageInfo" class="mt-4 hidden">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="font-medium text-gray-600">Dimensions:</span>
+                                <span id="imageDimensions" class="text-gray-800"></span>
+                            </div>
+                            <div>
+                                <span class="font-medium text-gray-600">File Size:</span>
+                                <span id="imageSize" class="text-gray-800"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preprocessing Tab -->
+        <div id="content-preprocessing" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Controls -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Preprocessing Options</h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="flex items-center space-x-3">
+                                <input type="checkbox" id="grayscaleToggle" class="w-4 h-4 text-blue-600">
+                                <span class="font-medium">Grayscale Conversion</span>
+                            </label>
+                            <p class="text-sm text-gray-500 mt-1">Convert to grayscale for better feature detection</p>
+                        </div>
+
+                        <div>
+                            <label class="block font-medium mb-2">Contrast Adjustment</label>
+                            <input type="range" id="contrastSlider" min="0.5" max="2" step="0.1" value="1" class="w-full">
+                            <div class="flex justify-between text-sm text-gray-500">
+                                <span>Low</span>
+                                <span id="contrastValue">1.0</span>
+                                <span>High</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block font-medium mb-2">Brightness</label>
+                            <input type="range" id="brightnessSlider" min="-50" max="50" step="5" value="0" class="w-full">
+                            <div class="flex justify-between text-sm text-gray-500">
+                                <span>Dark</span>
+                                <span id="brightnessValue">0</span>
+                                <span>Bright</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center space-x-3">
+                                <input type="checkbox" id="noiseReduction" class="w-4 h-4 text-blue-600">
+                                <span class="font-medium">Noise Reduction</span>
+                            </label>
+                            <p class="text-sm text-gray-500 mt-1">Apply Gaussian blur to reduce noise</p>
+                        </div>
+
+                        <button onclick="applyPreprocessing()" class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors">
+                            Apply Preprocessing
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Original Image -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Original Image</h3>
+                    <div id="originalImage" class="border-2 border-gray-200 rounded-lg h-80 flex items-center justify-center">
+                        <p class="text-gray-400">Upload an image first</p>
+                    </div>
+                </div>
+
+                <!-- Processed Image -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Processed Image</h3>
+                    <div id="processedImage" class="border-2 border-gray-200 rounded-lg h-80 flex items-center justify-center">
+                        <p class="text-gray-400">Apply preprocessing to see results</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Tab -->
+        <div id="content-analysis" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Analysis Controls -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">Check Your Eye Health</h3>
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-green-700">
+                                <strong>🔒 Your privacy is protected:</strong> Your photos are processed securely and never stored or shared.
+                            </p>
+                        </div>
+                        <button onclick="runAnalysis()" id="analyzeBtn" class="w-full bg-green-600 text-white py-4 rounded-lg hover:bg-green-700 transition-colors text-lg font-medium">
+                            👁️ Check My Eye Health (Free)
+                        </button>
+                        <div id="analysisProgress" class="hidden mt-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="processing-animation w-6 h-6 bg-green-600 rounded-full"></div>
+                                <span class="text-green-600 font-medium">Checking your eye health...</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mt-3">
+                                <div id="progressBar" class="bg-green-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prediction Results -->
+                    <div id="predictionResults" class="bg-white rounded-xl shadow-lg p-6 hidden">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">Prediction Results</h3>
+                        <div id="disordersList" class="space-y-3">
+                            <!-- Results will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualization -->
+                <div class="space-y-6">
+                    <!-- Confidence Chart -->
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">Confidence Distribution</h3>
+                        <div id="confidenceChart" class="h-64"></div>
+                    </div>
+
+                    <!-- Grad-CAM Visualization -->
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">Model Attention Map</h3>
+                        <div id="gradcamViz" class="border-2 border-gray-200 rounded-lg h-64 flex items-center justify-center relative">
+                            <p class="text-gray-400">Run analysis to see attention map</p>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-2">Red areas indicate regions the model focused on for prediction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="content-history" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- History List -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800">Analysis History</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="exportHistory('pdf')" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                                📄 Export PDF
+                            </button>
+                            <button onclick="exportHistory('csv')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                📊 Export CSV
+                            </button>
+                        </div>
+                    </div>
+                    <div id="historyTable" class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">Date/Time</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">Image</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">Top Prediction</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">Confidence</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-600">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <!-- History entries will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Analytics Panel -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Session Analytics</h3>
+                    <div class="space-y-4">
+                        <div class="text-center p-4 bg-blue-50 rounded-lg">
+                            <div class="text-2xl font-bold text-blue-600" id="totalAnalyses">0</div>
+                            <div class="text-sm text-gray-600">Total Analyses</div>
+                        </div>
+                        <div class="text-center p-4 bg-green-50 rounded-lg">
+                            <div class="text-2xl font-bold text-green-600" id="avgConfidence">0%</div>
+                            <div class="text-sm text-gray-600">Avg Confidence</div>
+                        </div>
+                        <div class="text-center p-4 bg-purple-50 rounded-lg">
+                            <div class="text-2xl font-bold text-purple-600" id="mostCommon">-</div>
+                            <div class="text-sm text-gray-600">Most Common</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <h4 class="font-medium mb-3">Disorder Distribution</h4>
+                        <div id="distributionChart" class="h-48"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentImage = null;
+        let analysisHistory = [];
+        let currentTab = 'upload';
+        let currentUser = null;
+        let isLoggedIn = false;
+
+        // Disorder types and their descriptions
+        const disorderTypes = [
+            { name: 'Normal', color: '#10b981', description: 'Healthy iris with no detected abnormalities' },
+            { name: 'Glaucoma', color: '#ef4444', description: 'Increased intraocular pressure affecting optic nerve' },
+            { name: 'Diabetic Retinopathy', color: '#f59e0b', description: 'Diabetes-related blood vessel damage' },
+            { name: 'Cataract', color: '#8b5cf6', description: 'Clouding of the eye lens' },
+            { name: 'Macular Degeneration', color: '#06b6d4', description: 'Age-related central vision loss' },
+            { name: 'Retinal Detachment', color: '#ec4899', description: 'Separation of retinal layers' }
+        ];
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('[id^="tab-"]').forEach(tab => {
+                tab.classList.remove('tab-active');
+                tab.classList.add('hover:bg-gray-300');
+            });
+            
+            // Show selected content and activate tab
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('tab-active');
+            document.getElementById(`tab-${tabName}`).classList.remove('hover:bg-gray-300');
+            
+            currentTab = tabName;
+        }
+
+        // File upload handling
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropArea.classList.add('drag-over');
+        }
+
+        function unhighlight(e) {
+            dropArea.classList.remove('drag-over');
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    displayImage(file);
+                } else {
+                    alert('Please select a valid image file (JPG, PNG, BMP)');
+                }
+            }
+        }
+
+        function displayImage(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentImage = e.target.result;
+                const previewArea = document.getElementById('previewArea');
+                previewArea.innerHTML = `<img src="${currentImage}" alt="Uploaded iris" class="max-w-full max-h-full object-contain rounded-lg">`;
+                
+                // Show image info
+                const imageInfo = document.getElementById('imageInfo');
+                const img = new Image();
+                img.onload = function() {
+                    document.getElementById('imageDimensions').textContent = `${this.width} × ${this.height}px`;
+                    document.getElementById('imageSize').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+                    imageInfo.classList.remove('hidden');
+                };
+                img.src = currentImage;
+                
+                // Update original image in preprocessing tab
+                document.getElementById('originalImage').innerHTML = `<img src="${currentImage}" alt="Original" class="max-w-full max-h-full object-contain rounded-lg">`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Preprocessing controls
+        document.getElementById('contrastSlider').addEventListener('input', function(e) {
+            document.getElementById('contrastValue').textContent = e.target.value;
+        });
+
+        document.getElementById('brightnessSlider').addEventListener('input', function(e) {
+            document.getElementById('brightnessValue').textContent = e.target.value;
+        });
+
+        function applyPreprocessing() {
+            if (!currentImage) {
+                alert('Please upload an image first');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Apply filters
+                const contrast = document.getElementById('contrastSlider').value;
+                const brightness = document.getElementById('brightnessSlider').value;
+                const grayscale = document.getElementById('grayscaleToggle').checked;
+                const noise = document.getElementById('noiseReduction').checked;
+                
+                let filterString = `contrast(${contrast}) brightness(${100 + parseInt(brightness)}%)`;
+                if (grayscale) filterString += ' grayscale(100%)';
+                if (noise) filterString += ' blur(0.5px)';
+                
+                ctx.filter = filterString;
+                ctx.drawImage(img, 0, 0);
+                
+                const processedImageData = canvas.toDataURL();
+                document.getElementById('processedImage').innerHTML = `<img src="${processedImageData}" alt="Processed" class="max-w-full max-h-full object-contain rounded-lg">`;
+            };
+            
+            img.src = currentImage;
+        }
+
+        // Analysis simulation
+        function runAnalysis() {
+            if (!currentImage) {
+                alert('Please upload an image first');
+                return;
+            }
+
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const progressArea = document.getElementById('analysisProgress');
+            const progressBar = document.getElementById('progressBar');
+            
+            analyzeBtn.disabled = true;
+            progressArea.classList.remove('hidden');
+            
+            // Simulate analysis progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 100) progress = 100;
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        showResults();
+                        progressArea.classList.add('hidden');
+                        analyzeBtn.disabled = false;
+                    }, 500);
+                }
+            }, 200);
+        }
+
+        function showResults() {
+            // Generate mock predictions
+            const predictions = disorderTypes.map(disorder => ({
+                ...disorder,
+                confidence: Math.random() * 100
+            })).sort((a, b) => b.confidence - a.confidence);
+
+            // Display results
+            const resultsList = document.getElementById('disordersList');
+            resultsList.innerHTML = predictions.map((pred, index) => `
+                <div class="result-card p-4 border rounded-lg ${index === 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-medium text-gray-800">${pred.name}</span>
+                        <span class="text-lg font-bold" style="color: ${pred.color}">${pred.confidence.toFixed(1)}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div class="confidence-bar h-2 rounded-full" style="background-color: ${pred.color}; width: ${pred.confidence}%"></div>
+                    </div>
+                    <p class="text-sm text-gray-600">${pred.description}</p>
+                </div>
+            `).join('');
+
+            document.getElementById('predictionResults').classList.remove('hidden');
+
+            // Create confidence chart
+            const chartData = [{
+                x: predictions.map(p => p.name),
+                y: predictions.map(p => p.confidence),
+                type: 'bar',
+                marker: {
+                    color: predictions.map(p => p.color)
+                }
+            }];
+
+            Plotly.newPlot('confidenceChart', chartData, {
+                title: 'Disorder Confidence Scores',
+                xaxis: { title: 'Disorders' },
+                yaxis: { title: 'Confidence (%)' },
+                margin: { t: 40, b: 80, l: 60, r: 20 }
+            });
+
+            // Generate Grad-CAM visualization
+            generateGradCAM();
+
+            // Add to history
+            addToHistory(predictions);
+        }
+
+        function generateGradCAM() {
+            const gradcamArea = document.getElementById('gradcamViz');
+            
+            // Create a simple heatmap overlay simulation
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 200;
+            canvas.className = 'max-w-full max-h-full object-contain rounded-lg';
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradient for heatmap
+            const gradient = ctx.createRadialGradient(150, 100, 20, 150, 100, 80);
+            gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 0, 0.6)');
+            gradient.addColorStop(1, 'rgba(0, 0, 255, 0.2)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add some random hotspots
+            for (let i = 0; i < 3; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const hotspot = ctx.createRadialGradient(x, y, 5, x, y, 25);
+                hotspot.addColorStop(0, 'rgba(255, 0, 0, 0.9)');
+                hotspot.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                ctx.fillStyle = hotspot;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            gradcamArea.innerHTML = '';
+            gradcamArea.appendChild(canvas);
+        }
+
+        function addToHistory(predictions) {
+            const timestamp = new Date().toLocaleString();
+            const topPrediction = predictions[0];
+            
+            const historyEntry = {
+                timestamp,
+                image: currentImage,
+                topPrediction: topPrediction.name,
+                confidence: topPrediction.confidence,
+                allPredictions: predictions
+            };
+            
+            analysisHistory.unshift(historyEntry);
+            updateHistoryDisplay();
+            updateAnalytics();
+        }
+
+        function updateHistoryDisplay() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = analysisHistory.map((entry, index) => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-3">${entry.timestamp}</td>
+                    <td class="px-4 py-3">
+                        <img src="${entry.image}" alt="Analysis ${index + 1}" class="w-12 h-12 object-cover rounded">
+                    </td>
+                    <td class="px-4 py-3 font-medium">${entry.topPrediction}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                            ${entry.confidence.toFixed(1)}%
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="viewDetails(${index})" class="text-blue-600 hover:text-blue-800 text-sm">
+                            View Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateAnalytics() {
+            document.getElementById('totalAnalyses').textContent = analysisHistory.length;
+            
+            if (analysisHistory.length > 0) {
+                const avgConf = analysisHistory.reduce((sum, entry) => sum + entry.confidence, 0) / analysisHistory.length;
+                document.getElementById('avgConfidence').textContent = avgConf.toFixed(1) + '%';
+                
+                // Find most common prediction
+                const predictions = analysisHistory.map(entry => entry.topPrediction);
+                const frequency = {};
+                predictions.forEach(pred => frequency[pred] = (frequency[pred] || 0) + 1);
+                const mostCommon = Object.keys(frequency).reduce((a, b) => frequency[a] > frequency[b] ? a : b);
+                document.getElementById('mostCommon').textContent = mostCommon;
+                
+                // Create distribution chart
+                const distributionData = [{
+                    labels: Object.keys(frequency),
+                    values: Object.values(frequency),
+                    type: 'pie',
+                    hole: 0.4
+                }];
+                
+                Plotly.newPlot('distributionChart', distributionData, {
+                    margin: { t: 20, b: 20, l: 20, r: 20 },
+                    showlegend: false
+                });
+            }
+        }
+
+        function viewDetails(index) {
+            const entry = analysisHistory[index];
+            alert(`Analysis Details:\n\nTimestamp: ${entry.timestamp}\nTop Prediction: ${entry.topPrediction}\nConfidence: ${entry.confidence.toFixed(1)}%\n\nAll Predictions:\n${entry.allPredictions.map(p => `${p.name}: ${p.confidence.toFixed(1)}%`).join('\n')}`);
+        }
+
+        function exportHistory(format) {
+            if (analysisHistory.length === 0) {
+                alert('No analysis history to export');
+                return;
+            }
+            
+            if (format === 'csv') {
+                const csvContent = [
+                    'Timestamp,Top Prediction,Confidence,All Predictions',
+                    ...analysisHistory.map(entry => 
+                        `"${entry.timestamp}","${entry.topPrediction}","${entry.confidence.toFixed(1)}%","${entry.allPredictions.map(p => `${p.name}:${p.confidence.toFixed(1)}%`).join(';')}"`
+                    )
+                ].join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'deepiris_analysis_history.csv';
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else if (format === 'pdf') {
+                alert('PDF export functionality would integrate with a PDF library like jsPDF in a real implementation');
+            }
+        }
+
+        // User Authentication Functions
+        function showLogin() {
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('registerModal').classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function switchToRegister() {
+            closeModal('loginModal');
+            showRegister();
+        }
+
+        function switchToLogin() {
+            closeModal('registerModal');
+            showLogin();
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            // Default credentials for demo
+            const validCredentials = [
+                { email: 'user@eyecare.com', password: 'user123', firstName: 'Maria', lastName: 'Santos', role: 'Community Member', institution: 'San Miguel Village' },
+                { email: 'village@eyecare.com', password: 'village123', firstName: 'Juan', lastName: 'Rodriguez', role: 'Village Health Worker', institution: 'Las Flores Community' },
+                { email: 'health@eyecare.com', password: 'health123', firstName: 'Ana', lastName: 'Garcia', role: 'Local Health Volunteer', institution: 'Rural Health Center' }
+            ];
+            
+            // Check credentials
+            const user = validCredentials.find(cred => cred.email === email && cred.password === password);
+            
+            if (!user) {
+                showNotification('Invalid email or password. New users must create an account first.', 'error');
+                return;
+            }
+            
+            // Simulate login process
+            setTimeout(() => {
+                currentUser = {
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    role: user.role,
+                    institution: user.institution,
+                    memberSince: 'Jan 2024',
+                    totalAnalyses: analysisHistory.length
+                };
+                
+                isLoggedIn = true;
+                updateUserInterface();
+                closeModal('loginModal');
+                
+                // Show success message
+                showNotification('Welcome back, ' + currentUser.firstName + '! Ready to check your eye health?', 'success');
+            }, 1000);
+        }
+
+        function handleRegister(event) {
+            event.preventDefault();
+            
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const email = document.getElementById('registerEmail').value;
+            const role = document.getElementById('userRole').value;
+            const institution = document.getElementById('institution').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match!', 'error');
+                return;
+            }
+            
+            // Simulate registration process
+            setTimeout(() => {
+                currentUser = {
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email,
+                    role: role,
+                    institution: institution,
+                    memberSince: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+                    totalAnalyses: 0
+                };
+                
+                isLoggedIn = true;
+                updateUserInterface();
+                closeModal('registerModal');
+                
+                showNotification('Account created successfully! Welcome to EyeCare AI - your free eye health companion!', 'success');
+            }, 1000);
+        }
+
+        function updateUserInterface() {
+            if (isLoggedIn && currentUser) {
+                // Hide welcome page, show dashboard
+                document.getElementById('welcomePage').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                
+                // Hide logged out actions, show logged in actions
+                document.getElementById('loggedOutActions').classList.add('hidden');
+                document.getElementById('loggedInActions').classList.remove('hidden');
+                
+                // Update user info in header
+                const initials = (currentUser.firstName[0] + currentUser.lastName[0]).toUpperCase();
+                document.getElementById('userInitials').textContent = initials;
+                document.getElementById('userName').textContent = 
+                    (currentUser.role.includes('Dr.') ? '' : 'Dr. ') + currentUser.firstName + ' ' + currentUser.lastName;
+                document.getElementById('userRole').textContent = currentUser.role;
+                
+                // Update profile modal
+                document.getElementById('profileInitials').textContent = initials;
+                document.getElementById('profileFirstName').value = currentUser.firstName;
+                document.getElementById('profileLastName').value = currentUser.lastName;
+                document.getElementById('profileEmail').value = currentUser.email;
+                document.getElementById('profileRole').value = currentUser.role;
+                document.getElementById('profileInstitution').value = currentUser.institution;
+                document.getElementById('profileAnalyses').textContent = currentUser.totalAnalyses;
+                document.getElementById('memberSince').textContent = currentUser.memberSince;
+            } else {
+                // Show welcome page, hide dashboard
+                document.getElementById('welcomePage').classList.remove('hidden');
+                document.getElementById('dashboard').classList.add('hidden');
+                
+                // Show logged out actions, hide logged in actions
+                document.getElementById('loggedOutActions').classList.remove('hidden');
+                document.getElementById('loggedInActions').classList.add('hidden');
+            }
+        }
+
+        function toggleUserMenu() {
+            const menu = document.getElementById('userMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        function showProfile() {
+            document.getElementById('userMenu').classList.add('hidden');
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+
+        function showSettings() {
+            document.getElementById('userMenu').classList.add('hidden');
+            showNotification('Settings panel would open here in a full implementation', 'info');
+        }
+
+        function showSubscription() {
+            document.getElementById('userMenu').classList.add('hidden');
+            showNotification('Subscription management would open here', 'info');
+        }
+
+        function updateProfile(event) {
+            event.preventDefault();
+            
+            if (currentUser) {
+                currentUser.firstName = document.getElementById('profileFirstName').value;
+                currentUser.lastName = document.getElementById('profileLastName').value;
+                currentUser.email = document.getElementById('profileEmail').value;
+                currentUser.role = document.getElementById('profileRole').value;
+                currentUser.institution = document.getElementById('profileInstitution').value;
+                
+                updateUserInterface();
+                closeModal('profileModal');
+                showNotification('Profile updated successfully!', 'success');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            isLoggedIn = false;
+            analysisHistory = []; // Clear session data
+            updateUserInterface();
+            updateAnalytics();
+            document.getElementById('userMenu').classList.add('hidden');
+            showNotification('You have been signed out successfully', 'info');
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+            
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                info: 'bg-blue-500 text-white',
+                warning: 'bg-yellow-500 text-black'
+            };
+            
+            notification.className += ` ${colors[type] || colors.info}`;
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-lg">&times;</button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(event) {
+            const modals = ['loginModal', 'registerModal', 'profileModal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target === modal) {
+                    closeModal(modalId);
+                }
+            });
+            
+            // Close user menu when clicking outside
+            const userMenu = document.getElementById('userMenu');
+            if (!event.target.closest('#loggedInActions') && !userMenu.classList.contains('hidden')) {
+                userMenu.classList.add('hidden');
+            }
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up initial state
+            updateUserInterface();
+            updateAnalytics();
+            
+            // Add some sample history for demonstration
+            setTimeout(() => {
+                console.log('DeepIris system initialized');
+            }, 1000);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98cc695b91b7741b',t:'MTc2MDE2NTMwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
